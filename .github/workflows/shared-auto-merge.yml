@@ -60,6 +60,10 @@ jobs:
   static-checks-azure:
     name: Check Static Analysis for Azure
     runs-on: ubuntu-latest
+    permissions:  # ← Add explicit permissions
+      contents: read
+      checks: read
+      pull-requests: read
     if: |
       inputs.azure_cloud == true && 
       inputs.tfchecks_azure != '[]' && (

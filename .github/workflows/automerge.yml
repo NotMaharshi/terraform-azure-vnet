@@ -1,6 +1,6 @@
 name: Test Auto merge - Azure
 on:
-  workflow_dispatch:
+  workflow_dispatch:""
     inputs:
       test_user:
         description: 'GitHub username'
@@ -8,6 +8,10 @@ on:
         type: string
         default: 'NotMaharshi'
   pull_request:
+permissions:  # ← Add workflow-level permissions
+  contents: read
+  checks: read
+  pull-requests: write
 
 jobs:
   auto-merge-test:
