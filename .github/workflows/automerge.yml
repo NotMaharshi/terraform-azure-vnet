@@ -1,6 +1,6 @@
 name: Test Auto merge - Azure
 on:
-  workflow_dispatch:""
+  workflow_dispatch:
     inputs:
       test_user:
         description: 'GitHub username'
