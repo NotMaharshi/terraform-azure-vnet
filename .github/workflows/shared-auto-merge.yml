@@ -116,10 +116,14 @@ jobs:
   automerge:
     runs-on: ubuntu-latest
     needs: autoapprove
+    if: |
+      always() && 
+      needs.autoapprove.result == 'success' &&
+      github.event_name == 'pull_request' && 
+      github.event.pull_request.draft == false
     steps:
       - name: Automerge
         uses: pascalgn/automerge-action@v0.16.4
-        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB }}
           MERGE_FILTER_AUTHOR: ${{ inputs.test_mode && inputs.test_user || 'dependabot[bot]' }}
