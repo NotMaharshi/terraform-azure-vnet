@@ -21,6 +21,8 @@ jobs:
       test_mode: true
       test_user: ${{ inputs.test_user || github.actor }}
       tfchecks_azure: '["PR Validation / pr-validation", "tf-checks / tf-lint"]'
-    secrets: inherit  # ← This passes ALL secrets including GITHUB_TOKEN
+    secrets:
+      GITHUB: ${{ secrets.GITHUB_TOKEN }}
+
 
 
