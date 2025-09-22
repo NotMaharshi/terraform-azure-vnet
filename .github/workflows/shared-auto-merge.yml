@@ -1,0 +1,125 @@
+name: Automerge
+
+on:
+  workflow_call:
+    inputs:
+      tfcheck:
+        description: 'Enter the tfcheck action name.'
+        required: false
+        type: string
+      tfchecks_azure:
+        description: 'List of Azure TF checks'
+        required: false
+        type: string
+        default: '["PR Validation / pr-validation", "tf-checks / tf-lint"]'
+      azure_cloud:
+        description: 'Enable Azure checks'
+        required: false
+        type: boolean
+        default: false
+      test_mode:
+        description: 'Enable test mode (allows non-dependabot users)'
+        required: false
+        type: boolean
+        default: false
+      test_user:
+        description: 'GitHub username for testing (when test_mode is true)'
+        required: false
+        type: string
+    secrets:
+      GITHUB:
+        description: 'GitHub Token'
+        required: false
+
+jobs:
+  static-checks:
+    name: Check Static Analysis
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tf-checks: ["tf-lint / tflint", "tfsec / tfsec sarif report", "${{ inputs.tfcheck }}"]
+    if: |
+      !inputs.azure_cloud && (
+        github.actor == 'dependabot[bot]' || 
+        (inputs.test_mode == true && github.actor == inputs.test_user)
+      )
+    steps:
+      - name: Wait for 2 Minutes
+        run: sleep 120s
+        shell: bash
+
+      - name: Wait for "${{ matrix.tf-checks }}" to Succeed
+        uses: lewagon/wait-on-check-action@v1.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: ${{ matrix.tf-checks }}
+          repo-token: ${{ secrets.GITHUB }}
+          wait-interval: 30
+          allowed-conclusions: success
+
+  static-checks-azure:
+    name: Check Static Analysis for Azure
+    runs-on: ubuntu-latest
+    if: |
+      inputs.azure_cloud == true && 
+      inputs.tfchecks_azure != '[]' && (
+        github.actor == 'dependabot[bot]' || 
+        (inputs.test_mode == true && github.actor == inputs.test_user)
+      )
+    strategy:
+      matrix:
+        tf-checks: ${{ fromJSON(inputs.tfchecks_azure) }}
+    steps:
+      - name: Wait for 2 Minutes
+        run: sleep 120s
+        shell: bash
+
+      - name: Wait for "${{ matrix.tf-checks }}" to Succeed
+        uses: lewagon/wait-on-check-action@v1.4.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          check-name: ${{ matrix.tf-checks }}
+          repo-token: ${{ secrets.GITHUB }}
+          wait-interval: 30
+          allowed-conclusions: success
+
+  autoapprove:
+    permissions:
+      contents: write
+      pull-requests: write
+    name: Auto Approve PRs
+    needs: [static-checks, static-checks-azure]
+    runs-on: ubuntu-latest
+    if: |
+      always() && (
+        github.actor == 'dependabot[bot]' || 
+        (inputs.test_mode == true && github.actor == inputs.test_user)
+      ) && 
+      (needs.static-checks.result == 'success' || needs.static-checks-azure.result == 'success')
+    steps:
+      - name: Approve PR via GitHub Bot
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Approve PR via User
+        run: gh pr review --approve "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB}}
+
+  automerge:
+    runs-on: ubuntu-latest
+    needs: autoapprove
+    steps:
+      - name: Automerge
+        uses: pascalgn/automerge-action@v0.16.4
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB }}
+          MERGE_FILTER_AUTHOR: ${{ inputs.test_mode && inputs.test_user || 'dependabot[bot]' }}
+          MERGE_METHOD: "merge"
+          MERGE_DELETE_BRANCH: "true"
+          MERGE_LABELS: ${{ inputs.test_mode && 'test' || 'dependencies, github_actions' }}
+          MERGE_REQUIRED_APPROVALS: ""
