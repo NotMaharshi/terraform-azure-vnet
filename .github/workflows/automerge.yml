@@ -9,7 +9,7 @@ on:
         default: 'NotMaharshi'
   pull_request:
 permissions:  # ← Add workflow-level permissions
-  contents: read
+  contents: write
   checks: read
   pull-requests: write
 
