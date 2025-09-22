@@ -14,7 +14,6 @@ module "labels" {
   extra_tags      = var.extra_tags
 }
 
-
 ##-----------------------------------------------------------------------------
 ## Virtual Network – Creates a VNet with optional DNS, BGP, and DDoS settings
 ##-----------------------------------------------------------------------------
