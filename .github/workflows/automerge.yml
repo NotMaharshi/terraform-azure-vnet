@@ -8,6 +8,10 @@ on:
         type: string
         default: 'NotMaharshi'
   pull_request:
+permissions:  # ← Add workflow-level permissions
+  contents: read
+  checks: read
+  pull-requests: write
 
 jobs:
   auto-merge-test:
